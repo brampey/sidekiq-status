@@ -7,8 +7,12 @@ module Sidekiq::Status
     # chain.add Sidekiq::Status::ServerMiddleware, :expiration => 60 * 5
     # @param [Hash] opts middleware initialization options
     # @option opts [Fixnum] :expiration ttl for complete jobs
+    # @option opts [boolean] :all_jobs indicates all jobs should have status (default: true)
     def initialize(opts = {})
+      default_opts = {expiration: nil, all_jobs: true}
+      opts = default_opts.merge(opts)
       @expiration = opts[:expiration]
+      @all_jobs = opts[:all_jobs]
     end
 
     # Uses sidekiq's internal jid as id
@@ -22,6 +26,16 @@ module Sidekiq::Status
     # @param [Array] msg job args, should have jid format
     # @param [String] queue queue name
     def call(worker, msg, queue)
+       if @all_jobs || worker.class.ancestors.include?(Sidekiq::Status::Worker)
+        provide_status(worker)
+      else
+        yield
+      end
+    end
+
+    private
+
+    def provide_status(worker)
       # a way of overriding default expiration time,
       # so worker wouldn't lose its data
       # and it allows also to overwrite global expiration time on worker basis
