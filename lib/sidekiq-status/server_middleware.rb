@@ -25,9 +25,9 @@ module Sidekiq::Status
     # @param [Worker] worker worker instance, processed here if its class includes Status::Worker
     # @param [Array] msg job args, should have jid format
     # @param [String] queue queue name
-    def call(worker, msg, queue)
-       if @all_jobs || worker.class.ancestors.include?(Sidekiq::Status::Worker)
-        provide_status(worker)
+    def call(worker, msg, queue, &block)
+      if @all_jobs || worker.class.ancestors.include?(Sidekiq::Status::Worker)
+        provide_status(worker, &block)
       else
         yield
       end
@@ -35,7 +35,7 @@ module Sidekiq::Status
 
     private
 
-    def provide_status(worker)
+    def provide_status(worker, &block)
       # a way of overriding default expiration time,
       # so worker wouldn't lose its data
       # and it allows also to overwrite global expiration time on worker basis
